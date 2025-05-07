@@ -1,0 +1,116 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.dockerfile
+      args:
+        - NGINX_USER=${USER}
+        - NGINX_GROUP=${GROUP}
+    ports:
+      - 80:80
+    container_name: lib-book-nginx
+    environment:
+      NGINX_USER: ${USER}
+      NGINX_GROUP: ${GROUP}
+    volumes:
+      - ./src:/var/www/html
+    networks:
+      lib-book:
+        aliases:
+          - library-book.dev
+    depends_on:
+      - mysql
+      - php
+      - redis
+  mysql:
+    image: mysql:${MYSQL_VERSION}
+    container_name: lib-book-mysql
+    command: --sort_buffer_size=512M
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./mysql:/var/lib/mysql
+      - ./db_dumps:/var/db_dumps
+    networks:
+      - lib-book
+  php:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+      args:
+        - PHP_USER=${USER}
+        - PHP_GROUP=${GROUP}
+    container_name: lib-book-php
+    environment:
+      PHP_USER: ${USER}
+      PHP_GROUP: ${GROUP}
+    volumes:
+      - ./src:/var/www/html
+    working_dir: /var/www/html
+    command: ["php", "artisan", "octane:start", "--host=0.0.0.0", "--port=8000", "--server=swoole"]
+    networks:
+      - lib-book
+  redis:
+    image: redis:${REDIS_VERSION}
+    container_name: lib-book-redis
+    entrypoint: [ "redis-server", "--requirepass ${REDIS_PASSWORD}" ]
+    volumes:
+      - ./redis:/data
+    ports:
+      - 6379:6379
+    networks:
+      - lib-book
+  phpmyadmin:
+    image: phpmyadmin:${PHP_MY_ADMIN_VERSION}
+    container_name: lib-book-phpmyadmin
+    ports:
+      - 80:80
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      PMA_HOST: mysql
+    links:
+      - "mysql:db"
+    volumes:
+      - ./phpmyadmin/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php
+    networks:
+      - lib-book
+    depends_on:
+      - mysql
+  composer:
+    build:
+      context: .
+      dockerfile: composer.dockerfile
+      args:
+        - COMPOSER_USER=${USER}
+        - COMPOSER_GROUP=${GROUP}
+    environment:
+      COMPOSER_USER: ${USER}
+      COMPOSER_GROUP: ${GROUP}
+    volumes:
+      - ./src:/var/www/html
+    networks:
+      - lib-book
+    working_dir: /var/www/html
+    user: ${USER}
+  artisan:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+      args:
+        - PHP_USER=${USER}
+        - PHP_GROUP=${GROUP}
+    user: '1000'
+    volumes:
+      - ./src:/var/www/html
+    working_dir: /var/www/html
+    networks:
+      - lib-book
+    entrypoint: ["php", "/var/www/html/artisan"]
+networks:
+  lib-book:
+    driver: bridge
