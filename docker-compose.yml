@@ -69,7 +69,7 @@ services:
     image: phpmyadmin:${PHP_MY_ADMIN_VERSION}
     container_name: lib-book-phpmyadmin
     ports:
-      - 80:80
+      - 8090:80
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       PMA_HOST: mysql
