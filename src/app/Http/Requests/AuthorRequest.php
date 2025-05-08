@@ -26,8 +26,8 @@ class AuthorRequest extends FormRequest implements RequestInterface
         $route = $this->route()->getName();
 
         return match ($route) {
-            'author.store' => $this->author_validation_rules('required'),
-            'author.update' => $this->author_validation_rules('sometimes'),
+            'author.store' => $this->author_validation_create_rules(),
+            'author.update' => $this->author_validation_update_rules(),
             'author.get' => $this->filter_rules(),
             default => [],
         };
@@ -36,15 +36,29 @@ class AuthorRequest extends FormRequest implements RequestInterface
     /**
      * Author Validation Rules
      *
-     * @param string $rule_name
      * @return array[]
      */
-    private function author_validation_rules(string $rule_name): array
+    private function author_validation_create_rules(): array
     {
         return [
-            'name' => [$rule_name, 'string', 'max:255'],
-            'email' => [$rule_name, 'string', 'email', 'max:100', 'unique:authors'],
-            'date_of_birth' => [$rule_name, 'date'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:100', 'unique:authors'],
+            'date_of_birth' => ['required', 'date'],
+            'author_bio' => ['nullable', 'string'],
+        ];
+    }
+
+    /**
+     * Author Validation Rules
+     *
+     * @return array[]
+     */
+    private function author_validation_update_rules(): array
+    {
+        return [
+            'name' => ['sometimes', 'string', 'max:255'],
+            'email' => ['sometimes', 'string', 'email', 'max:100', 'unique:authors,email,' . $this->id],
+            'date_of_birth' => ['sometimes', 'date'],
             'author_bio' => ['nullable', 'string'],
         ];
     }
